@@ -111,7 +111,16 @@
   };
   $('clear').onclick = () => { rows = []; points = []; average.values = []; $('events').replaceChildren(); log('Session log cleared.'); draw(); };
   async function api(path, options) {
-    const response = await fetch(path, { cache: 'no-store', ...options });
+    if (globalThis.location?.protocol === 'file:') {
+      throw new Error('This page was opened directly. Close this tab, double-click launch.bat, and keep its window open.');
+    }
+    let response;
+    try { response = await fetch(path, { cache: 'no-store', ...options }); }
+    catch (error) {
+      if (error?.name === 'TypeError') throw new Error('The local service cannot be reached. Start launch.bat and keep its window open; check whether a previous operation is still running before retrying.');
+      throw error;
+    }
+    if (response.status === 404) throw new Error('The upload service is missing. Close this tab and start the app with launch.bat.');
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Server error ${response.status}`);
     return result;
@@ -154,6 +163,7 @@
     await startJob('/api/upload', { port: selected, sketch });
   };
   setInterval(() => { if (lastReading && Date.now() - lastReading > 3000) $('banner').textContent = `${source === 'demo' ? 'SIMULATED DATA · ' : ''}Reading is stale: no new distance sample for over 3 seconds.`; }, 1000);
+  if (globalThis.location?.protocol === 'file:') $('uploadStatus').textContent = 'Open the app with launch.bat and keep its window open to install tools or upload sketches.';
   if (!('serial' in navigator)) $('banner').textContent = 'Web Serial unavailable here. Use Chrome or Edge on localhost; demo remains available.';
   controls(); draw();
 })();
