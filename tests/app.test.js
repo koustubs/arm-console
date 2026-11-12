@@ -33,9 +33,12 @@ vm.runInNewContext(fs.readFileSync(require.resolve('../web/app.js'), 'utf8'), co
   assert.equal(elements.start.disabled, true);
   elements.demo.onclick(); assert.equal(elements.status.textContent, 'Demo · simulated');
   timers.at(-1)(); assert.match(elements.raw.textContent, /cm/); assert.match(elements.banner.textContent, /SIMULATED/);
+  assert.equal(elements.poseEmpty.hidden, true); assert.equal(elements.poseValues.hidden, false);
+  assert.equal(elements.poseBase.textContent, '81°');
   assert.equal(elements.start.disabled, true);
   await elements.disconnect.onclick();
   elements.connect.onclick(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(elements.poseEmpty.hidden, false); assert.equal(elements.poseValues.hidden, true);
   pendingRead({ done: false, value: new TextEncoder().encode('ARM,1\nS,1,150,580,9.9,0,SCAN,80,110,130,30\n') });
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(elements.raw.textContent, '9.9 cm'); assert.equal(elements.start.disabled, false);

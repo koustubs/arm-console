@@ -73,11 +73,15 @@ class Handler(SimpleHTTPRequestHandler):
     def valid_host(self):
         return self.headers.get("Host", "") in HOSTS
 
+    def end_headers(self):
+        # Keep the HTML, scripts and styles in sync after updates or branch changes.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def respond(self, code, value):
         payload = json.dumps(value).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)

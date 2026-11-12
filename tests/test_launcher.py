@@ -78,6 +78,17 @@ class HttpTests(unittest.TestCase):
     def setUp(self):
         launcher.job.update(state="idle", output="")
 
+    def test_dashboard_files_are_not_cached(self):
+        for path in ("/", "/app.js", "/style.css", "/api/session"):
+            with self.subTest(path=path):
+                connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+                connection.request("GET", path, headers={"Host": "localhost:49152"})
+                response = connection.getresponse()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.getheader("Cache-Control"), "no-store")
+                response.read()
+                connection.close()
+
     def wait_for_job(self):
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
