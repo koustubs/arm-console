@@ -104,7 +104,7 @@ void sample() {
       votes = samplesAtPosition = 0;
     }
   } else if (state == APPROACH) {
-    if (distanceCm < 2) {
+    if (distanceCm < 2 || distanceCm > 20) {
       if (++invalidCount >= INVALID_LIMIT) fault(F("RANGE_INVALID"));
     } else {
       invalidCount = 0;
@@ -125,6 +125,8 @@ void setup() {
 void loop() {
   readCommands();
   unsigned long now = millis();
+  // Do not let a late sample restart movement or trigger closure after the deadline.
+  if (state == APPROACH && now - stateAt >= APPROACH_TIMEOUT_MS) fault(F("APPROACH_TIMEOUT"));
   if (now - lastSample >= SAMPLE_MS) { lastSample = now; sample(); }
   switch (state) {
     case PREPARE:
@@ -137,7 +139,7 @@ void loop() {
       if (stepServo(gripServo, gripAngle, 30, 80) && millis() - stateAt >= 800) {
         invalidCount = 0; changeState(APPROACH);
       } break;
-    case APPROACH: if (millis() - stateAt >= APPROACH_TIMEOUT_MS) fault(F("APPROACH_TIMEOUT")); break;
+    case APPROACH: break;
     case CLOSE_GRIP: if (stepServo(gripServo, gripAngle, 0, 80)) changeState(LIFT_ELBOW); break;
     case LIFT_ELBOW: if (stepServo(elbowServo, elbowAngle, 120, 45)) changeState(LIFT_SHOULDER); break;
     case LIFT_SHOULDER: if (stepServo(shoulderServo, shoulderAngle, 110, 45)) changeState(TRANSFER); break;
