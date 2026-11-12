@@ -1,0 +1,3 @@
+.arduino/
+__pycache__/
+*.pyc

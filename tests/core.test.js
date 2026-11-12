@@ -1,0 +1,25 @@
+const assert = require('node:assert/strict');
+const { parseLine, LineBuffer, MovingAverage, csv } = require('../web/core.js');
+
+const sample = parseLine('S,42,1234,580,9.9,1,SCAN,80,110,130,30');
+assert.equal(sample.type, 'sample'); assert.equal(sample.distance, 9.9);
+assert.equal(sample.deviceMs, 1234); assert.equal(sample.grip, 1); assert.equal(sample.base, 80);
+assert.equal(parseLine('S,43,1384,0,-1.0,0,APPROACH,80,110,130,30').distance, null);
+assert.equal(parseLine('S,1,2,0,3,0,SCAN,80,110,130,30').type, 'unknown');
+assert.equal(parseLine('S,1,2,10,3,7,SCAN,80,110,130,30').type, 'unknown');
+assert.equal(parseLine('S,1,2,10,3,0,SCAN,181,110,130,30').type, 'unknown');
+assert.equal(parseLine('DISTANCE: -1').distance, null);
+assert.equal(parseLine('DISTANCE: 3.2 CM').distance, 3.2);
+assert.equal(parseLine('GRIP:1').grip, 1);
+assert.equal(parseLine('OBJECT DETECTED - MOVING 8 DEGREES').type, 'unknown');
+assert.equal(parseLine('ARM,1').type, 'hello');
+assert.equal(parseLine('F,APPROACH_LIMIT').type, 'fault');
+const lines = []; const buffer = new LineBuffer(line => lines.push(line));
+buffer.push('DISTANCE: 3'); buffer.push('.2 CM\r\nGRIP:'); buffer.push('1\n');
+assert.deepEqual(lines, ['DISTANCE: 3.2 CM', 'GRIP:1']);
+buffer.push('x'.repeat(4097)); assert.equal(lines.at(-1), '[oversized serial line discarded]');
+const avg = new MovingAverage(3);
+assert.equal(avg.add(3), 3); assert.equal(avg.add(6), 4.5); assert.equal(avg.add(null), null);
+assert.equal(avg.add(12), 12); assert.equal(avg.add(15), 13.5); assert.equal(avg.add(18), 15); assert.equal(avg.add(21), 18);
+assert.match(csv([{ message: 'one,"two"\nthree', source: 'demo' }]), /"one,""two""\nthree"/);
+console.log('Core parser, framing, filtering and CSV tests passed.');
