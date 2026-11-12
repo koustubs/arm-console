@@ -21,7 +21,7 @@
   function resetReadings() {
     average.values = []; points = []; lastReading = 0; legacyGrip = null; firmware = false;
     for (const id of ['raw', 'filtered', 'grip', 'state']) $(id).textContent = '—';
-    $('pose').textContent = 'Base — · Shoulder — · Elbow — · Gripper —'; draw();
+    $('poseEmpty').hidden = false; $('poseValues').hidden = true; draw();
   }
   function accept(line) {
     const record = ArmCore.parseLine(line); if (!record) return;
@@ -36,7 +36,9 @@
       if (record.type === 'sample') {
         $('state').textContent = record.state.replaceAll('_', ' ');
         $('grip').textContent = record.grip ? 'Active' : 'Inactive';
-        $('pose').textContent = `Base ${record.base}° · Shoulder ${record.shoulder}° · Elbow ${record.elbow}° · Gripper ${record.gripper}°`;
+        $('poseEmpty').hidden = true; $('poseValues').hidden = false;
+        $('poseBase').textContent = `${record.base}°`; $('poseShoulder').textContent = `${record.shoulder}°`;
+        $('poseElbow').textContent = `${record.elbow}°`; $('poseGripper').textContent = `${record.gripper}°`;
         Object.assign(row, { device_ms: record.deviceMs, sequence: record.seq, echo_us: record.echoUs, grip_input: record.grip, state: record.state, base_command_deg: record.base, shoulder_command_deg: record.shoulder, elbow_command_deg: record.elbow, gripper_command_deg: record.gripper });
       } else row.grip_input = legacyGrip;
       row.distance_cm = record.distance; row.filtered_cm = filtered === null ? null : filtered.toFixed(2);
@@ -111,7 +113,16 @@
   };
   $('clear').onclick = () => { rows = []; points = []; average.values = []; $('events').replaceChildren(); log('Session log cleared.'); draw(); };
   async function api(path, options) {
-    const response = await fetch(path, { cache: 'no-store', ...options });
+    if (globalThis.location?.protocol === 'file:') {
+      throw new Error('This page was opened directly. Close this tab, double-click launch.bat, and keep its window open.');
+    }
+    let response;
+    try { response = await fetch(path, { cache: 'no-store', ...options }); }
+    catch (error) {
+      if (error?.name === 'TypeError') throw new Error('The local service cannot be reached. Start launch.bat and keep its window open; check whether a previous operation is still running before retrying.');
+      throw error;
+    }
+    if (response.status === 404) throw new Error('The upload service is missing. Close this tab and start the app with launch.bat.');
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Server error ${response.status}`);
     return result;
@@ -154,6 +165,7 @@
     await startJob('/api/upload', { port: selected, sketch });
   };
   setInterval(() => { if (lastReading && Date.now() - lastReading > 3000) $('banner').textContent = `${source === 'demo' ? 'SIMULATED DATA · ' : ''}Reading is stale: no new distance sample for over 3 seconds.`; }, 1000);
+  if (globalThis.location?.protocol === 'file:') $('uploadStatus').textContent = 'Open the app with launch.bat and keep its window open to install tools or upload sketches.';
   if (!('serial' in navigator)) $('banner').textContent = 'Web Serial unavailable here. Use Chrome or Edge on localhost; demo remains available.';
   controls(); draw();
 })();

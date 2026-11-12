@@ -60,9 +60,10 @@ def perform(action, port=None, sketch=None):
                                   "--input-dir", str(build), "--verify", str(target))
         with lock:
             job.update(state="success", output=output[-12000:])
-    except (OSError, RuntimeError, subprocess.SubprocessError, ValueError, KeyError) as error:
+    except Exception as error:
+        # A worker must always leave the running state, including on unexpected failures.
         with lock:
-            job.update(state="error", output=str(error)[-12000:])
+            job.update(state="error", output=f"{type(error).__name__}: {error}"[-12000:])
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -72,11 +73,15 @@ class Handler(SimpleHTTPRequestHandler):
     def valid_host(self):
         return self.headers.get("Host", "") in HOSTS
 
+    def end_headers(self):
+        # Keep the HTML, scripts and styles in sync after updates or branch changes.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def respond(self, code, value):
         payload = json.dumps(value).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
@@ -97,8 +102,8 @@ class Handler(SimpleHTTPRequestHandler):
                         return self.respond(409, {"error": "A job is running."})
                     result = ports()
                 return self.respond(200, {"ports": result})
-            except (OSError, RuntimeError, subprocess.SubprocessError, ValueError, KeyError) as error:
-                return self.respond(500, {"error": str(error)})
+            except Exception as error:
+                return self.respond(500, {"error": f"{type(error).__name__}: {error}"})
         return super().do_GET()
 
     def do_POST(self):
