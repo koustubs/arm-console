@@ -21,7 +21,7 @@
   function resetReadings() {
     average.values = []; points = []; lastReading = 0; legacyGrip = null; firmware = false;
     for (const id of ['raw', 'filtered', 'grip', 'state']) $(id).textContent = '—';
-    $('pose').textContent = 'Base — · Shoulder — · Elbow — · Gripper —'; draw();
+    $('poseEmpty').hidden = false; $('poseValues').hidden = true; draw();
   }
   function accept(line) {
     const record = ArmCore.parseLine(line); if (!record) return;
@@ -36,7 +36,9 @@
       if (record.type === 'sample') {
         $('state').textContent = record.state.replaceAll('_', ' ');
         $('grip').textContent = record.grip ? 'Active' : 'Inactive';
-        $('pose').textContent = `Base ${record.base}° · Shoulder ${record.shoulder}° · Elbow ${record.elbow}° · Gripper ${record.gripper}°`;
+        $('poseEmpty').hidden = true; $('poseValues').hidden = false;
+        $('poseBase').textContent = `${record.base}°`; $('poseShoulder').textContent = `${record.shoulder}°`;
+        $('poseElbow').textContent = `${record.elbow}°`; $('poseGripper').textContent = `${record.gripper}°`;
         Object.assign(row, { device_ms: record.deviceMs, sequence: record.seq, echo_us: record.echoUs, grip_input: record.grip, state: record.state, base_command_deg: record.base, shoulder_command_deg: record.shoulder, elbow_command_deg: record.elbow, gripper_command_deg: record.gripper });
       } else row.grip_input = legacyGrip;
       row.distance_cm = record.distance; row.filtered_cm = filtered === null ? null : filtered.toFixed(2);
