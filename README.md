@@ -20,6 +20,8 @@ To run manually: `python launcher.py`. Use this launcher rather than a generic s
 
 The launcher binds to loopback and accepts only its predefined setup and upload operations. Keep the browser and launcher on the same computer. The upload process is software-tested without a board and still needs a supervised physical test.
 
+If the app says it cannot reach the local service, close that page, start `launch.bat`, and leave its window open. The address should begin with `http://localhost:49152/`, not `file://`. If the launcher reports that port 49152 is already in use, close the other application using it and try again. Before retrying an interrupted upload, check whether the previous operation is still running and inspect the board's state.
+
 Opening a serial connection can reset a classic Uno. If the **original** sketch is loaded, it automatically starts moving after reset. The new sketch remains idle until Start, but its first Start attaches servos and commands the original startup angles. Connect only when the arm is clear and supervised.
 
 ## Using the original sketch
@@ -35,7 +37,7 @@ Upload `baseline/Robotic_Arm_Controller/Robotic_Arm_Controller.ino` using the us
 
 The pin mapping is D3 base, D5 shoulder, D6 elbow, D9 gripper, D12 trigger, D11 echo, D2 contact input. D2 uses `INPUT_PULLUP` and is reported as active when LOW; an inactive value does not establish that a switch is installed. It is telemetry only. Motion is not conditioned on it. No grip force, actual joint position, object identity, or physical grasp success is measured. `COMPLETE` only means the commanded sequence finished.
 
-Relative to the baseline, the new sketch starts only on request, uses a shared sampled range for decisions and telemetry, sweeps from the current base command, stops in FAULT after 10 consecutive absent or below-2-cm readings during approach, an approach limit, or 15 seconds, and never intentionally closes following those faults. The 2–4 cm pickup range and original named target angles remain starting values, not verified calibration. Sampling is nominally 150 ms, not hard real-time. Behavior and timing differ from the original, and the mechanism has not been tested. The software does not perform object classification or verify a successful transfer.
+Relative to the baseline, the new sketch starts only on request, uses a shared sampled range for decisions and telemetry, sweeps from the current base command, stops in FAULT after 10 consecutive absent or out-of-range (below 2 cm or above 20 cm) readings during approach, an approach limit, or 15 seconds, and never intentionally closes following those faults. The 2–4 cm pickup range and original named target angles remain starting values, not verified calibration. Sampling is nominally 150 ms, not hard real-time. Behavior and timing differ from the original, and the mechanism has not been tested. The software does not perform object classification or verify a successful transfer.
 
 ## Data and protocol
 
@@ -47,7 +49,7 @@ Firmware transmits newline-delimited ASCII at 9600 baud:
 
 ## Development checks
 
-`node tests/core.test.js` tests parsing, split serial lines, invalid samples, filtering and CSV quoting. `node tests/app.test.js` exercises demo mode, a simulated serial connection and the upload UI. `python -m unittest discover -s tests -p "test_*.py"` checks the upload sequence, failure paths and local request protections without a board. With Arduino CLI, an installed AVR board core and Servo library: `arduino-cli compile --fqbn arduino:avr:uno firmware/ArmController`. Both sketches compiled for Uno during development with AVR core 1.8.8 and Servo 1.3.0. Hardware behavior, the serial port chooser on the target machine, and physical calibration remain to be verified.
+`node tests/core.test.js` tests parsing, split serial lines, invalid samples, filtering and CSV quoting. `node tests/app.test.js` exercises demo mode, a simulated serial connection and the upload UI. `python -m unittest discover -s tests -p "test_*.py"` checks the upload sequence, failure paths and local request protections without a board. A host C++ compiler can run `tests/firmware.test.cpp` with `tests/firmware_stub` on its include path; it exercises the actual sketch with simulated Arduino functions, sensors and servos. With Arduino CLI, an installed AVR board core and Servo library: `arduino-cli compile --fqbn arduino:avr:uno firmware/ArmController`. Both sketches compiled for Uno during development with AVR core 1.8.8 and Servo 1.3.0. Hardware behavior, the serial port chooser on the target machine, and physical calibration remain to be verified.
 
 ## License
 
